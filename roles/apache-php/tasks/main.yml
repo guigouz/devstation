@@ -26,12 +26,10 @@
     - php5-gd
     - php5-apcu
     - php5-xdebug
+    - php5-memcache
     - php5-imagick
     - php5
-
-- name: Start Apache on boot
-  sudo: yes
-  service: name=apache2 state=started enabled=yes
+  notify: restart apache
 
 - name: Enable vhost_alias
   sudo: yes
@@ -74,3 +72,7 @@
   args:
     creates: /etc/apache2/mods-enabled/alias.load
   notify: restart apache
+
+- name: Start Apache on boot
+  sudo: yes
+  service: name=apache2 state=started enabled=yes
