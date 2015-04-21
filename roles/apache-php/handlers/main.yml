@@ -1,0 +1,8 @@
+---
+  - name: restart apache
+    sudo: yes
+    service: name=apache2 state=restarted
+
+  - name: restart php-fpm
+    sudo: yes
+    service: name=php5-fpm state=restarted

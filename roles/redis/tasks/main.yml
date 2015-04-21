@@ -1,0 +1,15 @@
+# redis.yml
+---
+- name: Enable chris-lea/redis-server repository
+  sudo: yes
+  apt_repository: repo="ppa:chris-lea/redis-server" update_cache=yes
+
+- name: Install Redis
+  sudo: yes
+  apt: name={{ item }} state=latest
+  with_items:
+    - redis-server
+
+- name: Enable redis-server
+  sudo: yes
+  service: name=redis-server state=started enabled=yes

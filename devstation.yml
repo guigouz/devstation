@@ -1,0 +1,48 @@
+---
+- hosts: all
+  user: vagrant
+
+  pre_tasks:
+    - name: Common | Update apt cache
+      sudo: yes
+      apt: update-cache=yes cache_valid_time=600
+      tags: common
+
+    - name: Common | Install base utilities
+      sudo: yes
+      apt: name={{ item }} state=present
+      with_items:
+        - unzip
+
+  roles:
+    - { role: mysql,
+        bind_address: '0.0.0.0' }
+    - role: apache-php
+    - role: redis
+    - role: nodejs
+
+  tasks:
+    - lineinfile: dest=/etc/apache2/conf-enabled/devstation.conf state=present create=true
+                  line="Include /vagrant/conf/*.conf"
+      sudo: yes
+      notify: restart apache
+      tags: setup
+
+    - lineinfile: dest=/etc/php5/apache2/php.ini state=present
+                  line="display_errors = On" regexp="^display_errors"
+      sudo: yes
+      notify: restart apache
+      tags: setup
+
+    - lineinfile: dest=/etc/php5/apache2/php.ini state=present
+                  line="display_startup_errors = On" regexp="^display_startup_errors"
+      sudo: yes
+      notify: restart apache
+      tags: setup
+
+    - file: path=/etc/apache2/sites-enabled/000-default.conf state=absent
+      sudo: yes
+      tags: setup
+
+    - mysql_user: name=root host=% priv=*.*:ALL password='' state=present
+      tags: setup

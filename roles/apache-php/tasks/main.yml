@@ -1,0 +1,76 @@
+# apache-php.yml
+---
+- name: Enable multiverse repository
+  sudo: yes
+  apt_repository: repo="deb http://archive.ubuntu.com/ubuntu trusty multiverse"
+
+- name: Enable multiverse-security repository
+  sudo: yes
+  apt_repository: repo="deb http://security.ubuntu.com/ubuntu trusty-security multiverse"
+
+- name: Install Apache
+  sudo: yes
+  apt: name={{ item }} state=latest update_cache=yes
+  with_items:
+    - apache2
+    - apache2-mpm-event
+
+- name: Install PHP and extensions
+  sudo: yes
+  apt: name={{ item }} state=latest
+  with_items:
+    - libapache2-mod-php5
+    - php5-mysqlnd
+    - php5-mcrypt
+    - php5-curl
+    - php5-gd
+    - php5-apcu
+    - php5-xdebug
+    - php5-imagick
+    - php5
+
+- name: Start Apache on boot
+  sudo: yes
+  service: name=apache2 state=started enabled=yes
+
+- name: Enable vhost_alias
+  sudo: yes
+  shell: a2enmod vhost_alias
+  args:
+    creates: /etc/apache2/mods-enabled/vhost_alias.load
+  notify: restart apache
+
+- name: Enable mod_rewrite
+  sudo: yes
+  shell: a2enmod rewrite
+  args:
+    creates: /etc/apache2/mods-enabled/rewrite.load
+  notify: restart apache
+
+- name: Enable mod_actions
+  sudo: yes
+  shell: a2enmod actions
+  args:
+    creates: /etc/apache2/mods-enabled/actions.load
+  notify: restart apache
+
+- name: Enable mod_headers
+  sudo: yes
+  shell: a2enmod headers
+  args:
+    creates: /etc/apache2/mods-enabled/headers.load
+  notify: restart apache
+
+- name: Enable mod_expires
+  sudo: yes
+  shell: a2enmod expires
+  args:
+    creates: /etc/apache2/mods-enabled/expires.load
+  notify: restart apache
+
+- name: Enable mod_alias
+  sudo: yes
+  shell: a2enmod alias
+  args:
+    creates: /etc/apache2/mods-enabled/alias.load
+  notify: restart apache

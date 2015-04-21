@@ -4,10 +4,19 @@
 apt-get update
 
 # Install requirements
-apt-get install -y apache2 build-essential checkinstall php5 php5-cli php5-mcrypt php5-gd php-apc git sqlite php5-sqlite curl php5-curl php5-dev php-pear php5-xdebug vim-nox ruby rubygems sqlite3 libsqlite3-dev
-
-# Install Mailcatcher
-sudo gem install mailcatcher
+apt-get install -y apache2
+apt-get install -y php5
+apt-get install -y php5-cli
+apt-get install -y php5-mcrypt
+apt-get install -y php5-gd
+apt-get install -y php-apc
+apt-get install -y git
+apt-get install -y sqlite
+apt-get install -y php5-sqlite
+apt-get install -y curl
+apt-get install -y php5-curl
+apt-get install -y php5-xdebug
+apt-get install -y msmtp ca-certificates vim-nox
 
 # Install MySQL
 sudo debconf-set-selections <<< 'mysql-server-<version> mysql-server/root_password password root'
@@ -69,24 +78,69 @@ VHOST=$(cat <<EOF
                     Order allow,deny
                     Allow from all
             </Directory>
-            Alias /xhprof "/usr/share/php/xhprof_html"
-            <Directory "/usr/share/php/xhprof_html">
-                Options FollowSymLinks
-                AllowOverride All
-                Order allow,deny
-                allow from all
-            </Directory>
     </VirtualHost>
 EOF
 )
 echo "${VHOST}" > /etc/apache2/sites-available/default
 
-# Configure PHP to use Mailcatcher
-sudo sed -i "s[^;sendmail_path =.*[sendmail_path = '/usr/bin/env catchmail'[g" /etc/php5/apache2/php.ini
+# Configure MSMTP
+MSMTP=$(cat <<EOF
+# ------------------------------------------------------------------------------
+# msmtp System Wide Configuration file
+# ------------------------------------------------------------------------------
+
+# A system wide configuration is optional.
+# If it exists, it usually defines a default account.
+# This allows msmtp to be used like /usr/sbin/sendmail.
+
+# ------------------------------------------------------------------------------
+# Accounts
+# ------------------------------------------------------------------------------
+
+# Main Account
+defaults
+tls on
+tls_starttls on
+tls_trust_file /etc/ssl/certs/ca-certificates.crt
+
+account default
+host smtp.gmail.com
+port 587
+auth on
+from user@gmail.com
+user user@gmail.com
+password password
+logfile /var/log/msmtp.log
+
+# ------------------------------------------------------------------------------
+# Configurations
+# ------------------------------------------------------------------------------
+
+# Construct envelope-from addresses of the form "user@oursite.example".
+#auto_from on
+#maildomain fermmy.server
+
+# Use TLS.
+#tls on
+#tls_trust_file /etc/ssl/certs/ca-certificates.crt
+
+# Syslog logging with facility LOG_MAIL instead of the default LOG_USER.
+# Must be done within "account" sub-section above
+#syslog LOG_MAIL
+
+# Set a default account
+
+# ------------------------------------------------------------------------------
+EOF
+)
+echo "${MSMTP}" > /etc/msmtprc
+
+# Configure PHP to use MSMTP
+sudo sed -i "s[^;sendmail_path =.*[sendmail_path = '/usr/bin/msmtp -t'[g" /etc/php5/apache2/php.ini
 
 # Configure XDebug
 XDEBUG=$(cat <<EOF
-zend_extension=/usr/lib/php5/20100525/xdebug.so
+zend_extension=/usr/lib/php5/20090626+lfs/xdebug.so
 xdebug.profiler_enable=1
 xdebug.profiler_output_dir="/tmp"
 xdebug.profiler_append=0
@@ -101,36 +155,11 @@ then
     git clone https://github.com/jokkedk/webgrind.git /var/www/webgrind
 fi
 
-# Install XHProf
-CONFIG=$(cat <<EOF
-extension=xhprof.so
-xhprof.output_dir="/var/tmp/xhprof"
-EOF
-)
-echo "${CONFIG}" > /etc/php5/conf.d/xhprof.ini
-if [ ! -d /usr/share/php/xhprof_html ];
-then
-    sudo pecl install xhprof-beta
-fi
-
-if [ ! -d /var/tmp/xhprof ];
-then
-    sudo mkdir /var/tmp/xhprof
-    sudo chmod 777 /var/tmp/xhprof
-fi
-
-# Install Composer globally
-curl -sS https://getcomposer.org/installer | php
-sudo mv composer.phar /usr/local/bin/composer
-
 # Enable mod_rewrite
 sudo a2enmod rewrite
 
 # Restart Apache
 sudo service apache2 restart
 
-# Start Mailcatcher
-mailcatcher --ip=0.0.0.0
-
-# Create the database
+# Create the BVL database
 mysql -uroot -proot < /var/www/webapp/sql/setup.sql

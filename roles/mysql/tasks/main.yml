@@ -1,0 +1,26 @@
+# mysql.yml
+---
+
+- name: Install Mysql
+  sudo: yes
+  apt: name=mysql-server state=present
+
+- name: Install python-mysqldb
+  sudo: yes
+  apt: name=python-mysqldb state=present
+
+- name: Configure mysql
+  sudo: yes
+  template: src="my.j2" dest="/etc/mysql/my.cnf"
+            backup=yes
+            owner=root
+            group=root
+            mode=0644
+
+- name: Secure Installation
+  include: hardening-mysql.yml
+  when: mysql_root_password is defined
+
+- name: Start Mysql
+  sudo: yes
+  service: name=mysql state=restarted enabled=yes
