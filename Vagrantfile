@@ -20,4 +20,7 @@ Vagrant.configure("2") do |config|
   config.vm.provision "ansible" do |ansible|
     ansible.playbook = "devstation.yml"
   end
+
+  config.vm.provision "shell", inline: "sudo service apache2 restart", run: "always"
+
 end
